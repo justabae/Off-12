@@ -127,11 +127,10 @@ async function handleEvent(ev) {
     // 同一晚已打過卡 → 不重複計算,提示原始時間
     const exist = DB.checkins[ck];
     if (exist) {
-      const t = new Date(exist.nightTime);
-      const tTW = new Date(t.toLocaleString("en-US", { timeZone: TZ }));
+      // nightTime 儲存時已是台北時間,直接格式化,不能再轉一次時區
       return client.replyMessage(ev.replyToken, {
         type: "text",
-        text: `📌 你今晚(${sd})已在 ${fmtTime(tTW)} 打過卡囉,一晚只算一次\n手機放下,真的去睡!🌙`,
+        text: `📌 你今晚(${sd})已在 ${fmtTime(new Date(exist.nightTime))} 打過卡囉,一晚只算一次\n手機放下,真的去睡!🌙`,
       });
     }
     const before = now.getHours() >= 18;
