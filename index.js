@@ -104,7 +104,43 @@ app.post("/webhook", middleware(config), async (req, res) => {
   }
 });
 
+const RULES = `🌙 歡迎加入 Offline Before Midnight!
+
+我是 Off<12,幫你和夥伴一起養成午夜前睡覺的習慣。
+
+【怎麼玩】
+1️⃣ 每晚睡前傳「晚安」給我打卡
+2️⃣ 午夜 00:00 前打卡才算準時(凌晨 4 點前都算「當晚」)
+3️⃣ 準時的連續天數會累積,解鎖更好的寢具!
+
+【指令】
+😴「晚安」— 打卡下線
+📅「紀錄」— 查看最近 7 晚
+🏆「排行」— 看自己的名次
+
+【寢具收集】
+🛏️ 地板睡袋 → 🛌 單人床墊(3天)→ 🧸 記憶枕(7天)→ 🪶 羽絨被(14天)→ 🎐 遮光窗簾(21天)→ 👑 獨立筒名床(30天)→ 🌫️ 香氛加濕器(45天)→ 🏨 總統套房(60天)
+
+【提醒】
+⚠️ 超過午夜才打卡不算連續,還會收到警告(越常遲睡越兇 🚨)
+📌 一晚只能打一次卡,不能刷
+
+如果你有加入社群群組,我每晚 23:00 會點名還沒下線的人、00:00 公布結算、週日晚上發週報。
+
+今晚就開始,午夜前下線!🌙`;
+
 async function handleEvent(ev) {
+  // 加好友時發送玩法說明
+  if (ev.type === "follow") {
+    return client.replyMessage(ev.replyToken, { type: "text", text: RULES });
+  }
+  // Bot 被邀進群組時自我介紹
+  if (ev.type === "join") {
+    return client.replyMessage(ev.replyToken, {
+      type: "text",
+      text: "🌙 大家好,我是 Off<12!\n請每位夥伴先加我好友並在本群傳一次「排行」讓我認識你,之後私訊我「晚安」打卡即可。\n加好友後我會私訊完整玩法說明!",
+    });
+  }
   if (ev.type !== "message" || ev.message.type !== "text") return;
   const text = ev.message.text.trim();
   const userId = ev.source.userId;
@@ -151,6 +187,11 @@ async function handleEvent(ev) {
         text: lateWarning(profile.displayName, DB.users[userId].lateLevel),
       });
     }
+  }
+
+  // 說明:隨時重看玩法
+  if (/^(說明|玩法|規則|幫助|help)/i.test(text)) {
+    return client.replyMessage(ev.replyToken, { type: "text", text: RULES });
   }
 
   // 紀錄:查自己最近 7 晚的打卡狀況
