@@ -124,6 +124,16 @@ async function handleEvent(ev) {
 
   // 晚安打卡(建議私訊,但群組打也接受)
   if (/^(晚安|睡覺|打卡|我要睡了)/.test(text)) {
+    // 同一晚已打過卡 → 不重複計算,提示原始時間
+    const exist = DB.checkins[ck];
+    if (exist) {
+      const t = new Date(exist.nightTime);
+      const tTW = new Date(t.toLocaleString("en-US", { timeZone: TZ }));
+      return client.replyMessage(ev.replyToken, {
+        type: "text",
+        text: `📌 你今晚(${sd})已在 ${fmtTime(tTW)} 打過卡囉,一晚只算一次\n手機放下,真的去睡!🌙`,
+      });
+    }
     const before = now.getHours() >= 18;
     DB.checkins[ck] = { nightTime: now.toISOString(), beforeMidnight: before };
     if (before) {
@@ -142,6 +152,25 @@ async function handleEvent(ev) {
         text: lateWarning(profile.displayName, DB.users[userId].lateLevel),
       });
     }
+  }
+
+  // 紀錄:查自己最近 7 晚的打卡狀況
+  if (/^(紀錄|記錄|打卡紀錄|月曆)/.test(text)) {
+    const lines = [];
+    const cur = nowTW();
+    if (cur.getHours() < 4) cur.setDate(cur.getDate() - 1);
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(cur);
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      const c = DB.checkins[`${userId}|${key}`];
+      const mark = !c ? "▫️ 未打卡" : c.beforeMidnight ? "✅ 準時" : "🥱 過午夜";
+      lines.push(`${key.slice(5)} ${mark}`);
+    }
+    return client.replyMessage(ev.replyToken, {
+      type: "text",
+      text: `📅 你最近 7 晚的紀錄\n${lines.join("\n")}`,
+    });
   }
 
   // 排行:群組 → 列同群成員;私訊 → 只顯示自己的名次
